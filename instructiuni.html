@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#17253b">
+  <title>Instrucțiuni - Azor: Urmărirea prin oraș</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #101a2b;
+      color: #f2f7fb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 28px 16px 48px;
+      background:
+        radial-gradient(ellipse at top, rgba(76, 126, 158, 0.35), transparent 58%),
+        #101a2b;
+    }
+
+    main {
+      width: min(100%, 820px);
+      margin: 0 auto;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 18px;
+      color: #a7f3d0;
+      font-weight: 700;
+      text-underline-offset: 4px;
+    }
+
+    header,
+    section {
+      margin-bottom: 18px;
+      padding: clamp(20px, 5vw, 32px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      background: rgba(25, 39, 61, 0.94);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      color: #facc15;
+      font-size: clamp(30px, 7vw, 44px);
+      line-height: 1.1;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      color: #a7f3d0;
+      font-size: 22px;
+    }
+
+    p,
+    li {
+      color: #e0eaf4;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    p {
+      margin: 8px 0;
+    }
+
+    ol,
+    ul {
+      margin: 0;
+      padding-left: 24px;
+    }
+
+    li + li {
+      margin-top: 8px;
+    }
+
+    strong {
+      color: white;
+    }
+
+    .note {
+      padding: 12px 14px;
+      border-left: 4px solid #facc15;
+      border-radius: 8px;
+      background: rgba(250, 204, 21, 0.09);
+    }
+
+    .play-link {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: #facc15;
+      color: #263248;
+      font-weight: 800;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="back-link" href="prinde_sfera_ar.html">← Înapoi la joc</a>
+    <header>
+      <h1>🐕 Urmărirea prin oraș</h1>
+      <p>Un joc endless runner 3D: un polițist îl aruncă pe infractor în față, iar Azor aleargă pe străzile unui oraș cu blocuri, copaci și mașini ca să-l prindă. Ferește-te de obstacole și adună oase și monede pe drum.</p>
+      <a class="play-link" href="prinde_sfera_ar.html">Pornește jocul</a>
+    </header>
+
+    <section>
+      <h2>Comenzi</h2>
+      <ul>
+        <li>Apasă <strong>„Activează înclinarea”</strong> și ține telefonul drept o clipă pentru calibrare. Înclină-l stânga sau dreapta pentru a schimba banda; revino la poziția neutră pentru banda din mijloc.</li>
+        <li>Înclinarea folosește senzorul de orientare al telefonului (date combinate din giroscop și accelerometru). Zona neutră și filtrarea mișcării previn schimbările accidentale; poți opri senzorul apăsând din nou butonul.</li>
+        <li>Pe calculator: tastele <strong>săgeată stânga/dreapta</strong> sau <strong>A/D</strong> schimbă banda.</li>
+        <li><strong>Săgeata sus</strong>, <strong>W</strong> sau <strong>Space</strong>: sari peste obstacole.</li>
+        <li>Pe telefon/tabletă: glisează în sus pentru săritură. Dacă senzorii nu sunt disponibili sau permisiunea nu este acordată, glisează stânga/dreapta pentru schimbarea benzii.</li>
+        <li>Butonul de pe ecran <strong>SARI</strong> rămâne disponibil pe mobil.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Modul de realitate augmentată</h2>
+      <ol>
+        <li>Deschide pagina pe un telefon compatibil WebXR, printr-o conexiune securizată <strong>HTTPS</strong> (sau <strong>localhost</strong> pentru testare). Browserul va solicita accesul necesar pentru sesiunea AR.</li>
+        <li>Apasă <strong>„Plasează șoseaua pe podea”</strong> și mișcă încet telefonul, orientând camera spre podea sau spre o masă bine luminată, ca sistemul AR să poată scana mediul.</li>
+        <li>Reglează glisorul <strong>Dimensiunea traseului AR</strong> după spațiul disponibil. Afișajul indică amprenta aproximativă: de la 0,5 × 0,9 m pentru o masă la 6 × 10,8 m pentru o podea mai mare.</li>
+        <li>Așteaptă inelul verde stabil, apoi atinge ecranul pentru a plasa șoseaua și orașul la nivelul podelei. Poți regla dimensiunea și după plasare. Apasă apoi <strong>„Pornește urmărirea”</strong>.</li>
+        <li>Mișcă telefonul pentru a privi scena din unghiuri diferite și folosește aceleași comenzi de alergare. Apasă <strong>„Ieși din modul AR”</strong> pentru a reveni la scena 3D.</li>
+      </ol>
+      <p class="note">Modul AR necesită un browser și un dispozitiv cu suport WebXR <strong>immersive-ar</strong> și <strong>hit-test</strong> (de regulă, un telefon Android compatibil și Chrome actualizat). Dacă funcția nu este disponibilă, jocul 3D standard rămâne utilizabil. Deschiderea directă a fișierului <strong>file://</strong> poate bloca WebXR; folosește HTTPS sau localhost.</p>
+    </section>
+
+    <section>
+      <h2>Concepte AR demonstrate</h2>
+      <ul>
+        <li><strong>Urmărirea dispozitivului:</strong> sesiunea WebXR actualizează poziția și orientarea camerei în timp real, astfel încât perspectiva scenei se schimbă când miști telefonul.</li>
+        <li><strong>Detectarea podelei (WebXR hit-test):</strong> browserul folosește camera și urmărirea dispozitivului pentru a testa o rază din centrul vederii. Jocul filtrează rezultatele după normala suprafeței, acceptă suprafețe aproape orizontale și așteaptă detecții consecutive stabile înainte să afișeze reticulul verde.</li>
+        <li><strong>Înregistrarea conținutului virtual:</strong> atingerea ecranului (evenimentul WebXR <em>select</em>) fixează drumul la poziția și orientarea detectată în sistemul de coordonate AR; acesta rămâne ancorat acolo cât timp sesiunea este activă.</li>
+        <li><strong>Interacțiune multimodală:</strong> înclinarea telefonului schimbă banda, atingerea plasează scena, iar gesturile tactile și tastatura oferă comenzi alternative.</li>
+        <li><strong>Bucla de joc în timp real:</strong> logica existentă de coliziuni, colectare și dificultate actualizează obiectele în timp ce WebXR urmărește camera.</li>
+      </ul>
+      <p>Aplicația folosește exclusiv WebXR (nu AR.js) și nu citește direct imaginile camerei: detectarea vizuală și urmărirea suprafețelor sunt furnizate de subsistemul AR al browserului/dispozitivului prin hit-test. Filtrul local respinge suprafețele verticale și detecțiile instabile. Nu sunt implementate markeri, analiză proprie a cadrelor camerei sau ancore persistente între sesiuni.</p>
+      <p>Comenzile jocului și glisorul de dimensiune sunt elemente HTML 2D afișate ca WebXR DOM overlay peste camera live. Butoanele tactile au zone de apăsare mărite pentru utilizarea pe telefon.</p>
+    </section>
+
+    <section>
+      <h2>Regulile jocului</h2>
+      <ol>
+        <li>Apasă <strong>„Pornește urmărirea”</strong>. Polițistul îl aruncă pe infractor în față, apoi Azor pornește după el.</li>
+        <li>Azor aleargă înainte pe trei benzi. Mută-l la stânga sau la dreapta pentru a evita barierele și lucrările de pe stradă.</li>
+        <li>Sari peste barierele joase. Mașinile și obstacolele înalte trebuie evitate prin schimbarea benzii.</li>
+        <li>Adună oase și monede în timp ce alergi. Ele sunt numărate separat în partea de sus a ecranului.</li>
+        <li>Ridică pachetele-cadou: scutul te salvează de o coliziune, magnetul atrage oase și monede, iar cadoul violet dublează colectările pentru scurt timp.</li>
+        <li>Viteza crește la fiecare 120 de metri. Prinde infractorul înainte să te lovești de un obstacol!</li>
+        <li>După o capturare sau o coliziune poți porni o alergare nouă. Recordul de distanță se salvează în browser.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Ce găsești în joc</h2>
+      <ul>
+        <li>Oraș 3D cu blocuri și vitrine detaliate, skyline îndepărtat, trotuare, copaci stradali, felinare și trafic.</li>
+        <li>Modele 3D GLB locale pentru Azor și infractor, cu animații de alergare și repaus; Azor are și animație de săritură.</li>
+        <li>Mașini care circulă pe șosea și bariere de șantier care trebuie evitate prin schimbarea benzii sau săritură.</li>
+        <li>Oase, monede și trei tipuri de cadouri, cu efecte sonore și animații de alergare, săritură și capturare.</li>
+        <li>Traseu fără sfârșit: decorul și obstacolele se deplasează spre jucător, iar nivelul și viteza cresc în timp.</li>
+      </ul>
+      <p>Modelele sunt păstrate local în <strong>models/azor.glb</strong> și <strong>models/infractor.glb</strong>. Jocul schimbă animația în funcție de stare și păstrează personajele geometrice de rezervă dacă modelele nu se pot încărca. Pentru ca browserul să poată citi fișierele GLB și să pornească WebXR, rulează proiectul printr-un server local sau HTTPS, nu deschide direct HTML-ul ca <strong>file://</strong>.</p>
+      <p class="note">Sfat: uită-te înainte pe șosea și schimbă banda din timp. Nu poți trece prin obstacole, iar o săritură pornită prea târziu poate să nu te salveze.</p>
+    </section>
+  </main>
+</body>
+</html>

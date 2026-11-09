@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#17253b">
+  <title>Azor: Urmărirea prin oraș</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.5.0/dist/aframe-extras.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #87c6e7;
+      color: #fff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      touch-action: none;
+    }
+
+    a-scene {
+      position: fixed;
+      inset: 0;
+    }
+
+    #ui-overlay {
+      position: fixed;
+      z-index: 10;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    #hud {
+      position: fixed;
+      z-index: 11;
+      top: max(10px, env(safe-area-inset-top));
+      left: 50%;
+      width: min(94vw, 680px);
+      padding: 11px 16px;
+      transform: translateX(-50%);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 18px;
+      background: rgba(15, 28, 48, 0.9);
+      text-align: center;
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    #hud h1 {
+      margin: 0 0 2px;
+      color: #facc15;
+      font-size: clamp(18px, 4vw, 25px);
+      line-height: 1.15;
+    }
+
+    #hud p {
+      margin: 3px 0 8px;
+      color: #dce9f8;
+      font-size: 12px;
+    }
+
+    #stats {
+      display: flex;
+      justify-content: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      min-width: 82px;
+      padding: 5px 9px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .stat span {
+      color: #fde047;
+    }
+
+    #power-status {
+      min-height: 17px;
+      margin-top: 5px;
+      color: #a7f3d0;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .instructions-link {
+      display: inline-block;
+      margin-top: 6px;
+      color: #a7f3d0;
+      font-size: 12px;
+      font-weight: 700;
+      pointer-events: auto;
+      text-underline-offset: 3px;
+    }
+
+    #ar-button {
+      display: block;
+      margin: 8px auto 0;
+      padding: 7px 12px;
+      border: 1px solid rgba(167, 243, 208, 0.65);
+      border-radius: 999px;
+      background: rgba(167, 243, 208, 0.14);
+      color: #d1fae5;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    #ar-size-controls {
+      width: min(100%, 430px);
+      margin: 8px auto 0;
+      padding: 9px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #f2f7fb;
+      text-align: left;
+      pointer-events: auto;
+    }
+
+    #ar-size-controls[hidden] {
+      display: none;
+    }
+
+    #ar-size-controls label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    #ar-size-controls input {
+      width: 100%;
+      min-height: 36px;
+      accent-color: #34d399;
+      touch-action: pan-x;
+    }
+
+    #ar-size-readout {
+      display: block;
+      color: #a7f3d0;
+      font-size: 12px;
+      font-weight: 750;
+      text-align: center;
+    }
+
+    #message {
+      position: fixed;
+      z-index: 11;
+      bottom: max(112px, calc(env(safe-area-inset-bottom) + 104px));
+      left: 50%;
+      width: min(92vw, 520px);
+      transform: translateX(-50%);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+      text-align: center;
+      text-shadow: 0 2px 6px #101b2c;
+      pointer-events: none;
+    }
+
+    #controls {
+      position: fixed;
+      z-index: 11;
+      right: 0;
+      bottom: max(15px, env(safe-area-inset-bottom));
+      left: 0;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      padding: 0 max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right));
+      pointer-events: none;
+    }
+
+    #controls button,
+    #start-button {
+      min-height: 58px;
+      min-width: 58px;
+      padding: 14px 20px;
+      border: 0;
+      border-radius: 999px;
+      background: #facc15;
+      color: #263248;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 850;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      touch-action: manipulation;
+      pointer-events: auto;
+    }
+
+    #controls button {
+      min-width: 68px;
+      background: rgba(18, 33, 54, 0.92);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+
+    #controls button.jump {
+      min-width: 132px;
+      background: #facc15;
+      color: #263248;
+    }
+
+    #start-button {
+      position: fixed;
+      z-index: 12;
+      top: 50%;
+      left: 50%;
+      min-width: 240px;
+      min-height: 60px;
+      padding: 16px 24px;
+      transform: translate(-50%, -50%);
+    }
+
+    #start-button[hidden] {
+      display: none;
+    }
+
+    #controls button:active,
+    #start-button:active {
+      transform: translateY(2px);
+    }
+
+    #start-button:active {
+      transform: translate(-50%, calc(-50% + 2px));
+    }
+
+    @media (orientation: portrait) and (max-width: 700px) {
+      #hud {
+        width: min(96vw, 500px);
+        padding: 9px 10px;
+      }
+
+      #hud p {
+        max-width: 340px;
+        margin-right: auto;
+        margin-left: auto;
+      }
+
+      .stat {
+        min-width: 70px;
+        padding: 4px 7px;
+        font-size: 12px;
+      }
+    }
+
+    @media (max-height: 500px) {
+      #hud {
+        top: 5px;
+        padding: 6px 10px;
+      }
+
+      #hud p {
+        display: none;
+      }
+
+      .instructions-link {
+        margin-top: 3px;
+      }
+
+      #controls {
+        bottom: 6px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      #controls {
+        gap: 10px;
+      }
+
+      #controls button {
+        min-height: 64px;
+      }
+
+      #controls button.jump {
+        min-width: 144px;
+      }
+
+      #start-button {
+        width: min(86vw, 340px);
+        min-height: 64px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="ui-overlay">
+  <header id="hud" aria-live="polite">
+    <h1>🐕 Azor: Urmărirea prin oraș</h1>
+    <p>Schimbă banda și sari peste obstacole. Adună oase și monede ca să prinzi infractorul!</p>
+    <div id="stats">
+      <div class="stat">Distanță: <span id="distance">0</span> m</div>
+      <div class="stat">🦴 <span id="bones">0</span></div>
+      <div class="stat">🪙 <span id="coins">0</span></div>
+      <div class="stat">🎁 <span id="gifts">0</span></div>
+      <div class="stat">Nivel: <span id="level">1</span></div>
+      <div class="stat">Record: <span id="best-score">0</span> m</div>
+    </div>
+    <div id="power-status">Cadouri: scut · magnet · puncte duble</div>
+    <a class="instructions-link" href="instructiuni.html" target="_blank" rel="noopener">Instrucțiuni și reguli</a>
+    <button id="ar-button" type="button">📱 Plasează șoseaua pe podea</button>
+    <div id="ar-size-controls" hidden>
+      <label for="ar-size">Dimensiunea traseului AR</label>
+      <input id="ar-size" type="range" min="0.005" max="0.06" step="0.001" value="0.005">
+      <output id="ar-size-readout" for="ar-size">0,5 × 0,9 m · masă mică</output>
+    </div>
+  </header>
+
+  <div id="message" role="status">Urmărește-l pe infractor și ferește-te de obstacole!</div>
+  <button id="start-button" type="button">Pornește urmărirea</button>
+  <nav id="controls" aria-label="Comenzi joc">
+    <button id="tilt-button" type="button" aria-label="Activează comenzile prin înclinarea telefonului">Înclinare</button>
+    <button id="jump-button" class="jump" type="button">SARI ⬆</button>
+  </nav>
+  </div>
+
+  <a-scene
+    renderer="alpha: true; colorManagement: true; physicallyCorrectLights: true"
+    shadow="type: pcfsoft"
+    fog="type: exponential; color: #87c6e7; density: 0.003"
+    background="color: #87c6e7; transparent: false"
+    loading-screen="enabled: false"
+    vr-mode-ui="enabled: false"
+    endless-runner
+  >
+    <a-assets timeout="15000">
+      <a-asset-item id="azor-model-asset" src="models/azor.glb"></a-asset-item>
+      <a-asset-item id="thief-model-asset" src="models/infractor.glb"></a-asset-item>
+    </a-assets>
+    <a-sky color="#87c6e7"></a-sky>
+    <a-entity id="distant-skyline"></a-entity>
+    <a-plane rotation="-90 0 0" width="100" height="180" color="#777b83" material="roughness: 1"></a-plane>
+    <a-plane position="-3.35 0.025 0" rotation="-90 0 0" width="1.1" height="180" color="#a9a9a0"></a-plane>
+    <a-plane position="3.35 0.025 0" rotation="-90 0 0" width="1.1" height="180" color="#a9a9a0"></a-plane>
+    <a-plane position="0 0.03 0" rotation="-90 0 0" width="0.12" height="180" color="#f4d45c" material="transparent: true; opacity: 0.9"></a-plane>
+    <a-plane position="-1.1 0.035 0" rotation="-90 0 0" width="0.07" height="180" color="#e9e9dc" material="transparent: true; opacity: 0.75"></a-plane>
+    <a-plane position="1.1 0.035 0" rotation="-90 0 0" width="0.07" height="180" color="#e9e9dc" material="transparent: true; opacity: 0.75"></a-plane>
+    <a-plane position="-4.2 0.04 0" rotation="-90 0 0" width="0.08" height="180" color="#f1d86a"></a-plane>
+    <a-plane position="4.2 0.04 0" rotation="-90 0 0" width="0.08" height="180" color="#f1d86a"></a-plane>
+
+    <a-entity id="city">
+      <a-entity class="city-block" position="-7 0 -12">
+        <a-box position="0 2.5 0" width="3.6" height="5" depth="5" color="#d58c64" material="roughness: 0.95"></a-box>
+        <a-box position="0 5.2 0" width="3.9" height="0.35" depth="5.25" color="#8c5949"></a-box>
+        <a-box position="0 1.25 2.53" width="0.7" height="1.7" depth="0.1" color="#563c37"></a-box>
+        <a-box position="-1.05 3.2 2.54" width="0.58" height="0.72" depth="0.1" color="#a8d7e8"></a-box>
+        <a-box position="1.05 3.2 2.54" width="0.58" height="0.72" depth="0.1" color="#a8d7e8"></a-box>
+        <a-box position="-1.05 4.35 2.54" width="0.58" height="0.72" depth="0.1" color="#a8d7e8"></a-box>
+        <a-box position="1.05 4.35 2.54" width="0.58" height="0.72" depth="0.1" color="#a8d7e8"></a-box>
+      </a-entity>
+      <a-entity class="city-block" position="7 0 -19">
+        <a-box position="0 3 0" width="4.2" height="6" depth="5" color="#7c9f9e" material="roughness: 0.95"></a-box>
+        <a-box position="0 6.15 0" width="4.5" height="0.3" depth="5.2" color="#566f78"></a-box>
+        <a-box position="-1.2 2 2.53" width="0.72" height="0.9" depth="0.1" color="#b4dce4"></a-box>
+        <a-box position="0 2 2.53" width="0.72" height="0.9" depth="0.1" color="#b4dce4"></a-box>
+        <a-box position="1.2 2 2.53" width="0.72" height="0.9" depth="0.1" color="#b4dce4"></a-box>
+        <a-box position="-1.2 4 2.53" width="0.72" height="0.9" depth="0.1" color="#b4dce4"></a-box>
+        <a-box position="0 4 2.53" width="0.72" height="0.9" depth="0.1" color="#b4dce4"></a-box>
+        <a-box position="1.2 4 2.53" width="0.72" height="0.9" depth="0.1" color="#b4dce4"></a-box>
+      </a-entity>
+      <a-entity class="city-block" position="-7 0 -34">
+        <a-box position="0 3.1 0" width="4.2" height="6.2" depth="5" color="#d0bd79" material="roughness: 0.95"></a-box>
+        <a-box position="0 6.3 0" width="4.45" height="0.3" depth="5.2" color="#977c54"></a-box>
+        <a-box position="-1 2.6 2.53" width="0.7" height="0.85" depth="0.1" color="#a8d7e8"></a-box>
+        <a-box position="1 2.6 2.53" width="0.7" height="0.85" depth="0.1" color="#a8d7e8"></a-box>
+        <a-box position="-1 4.5 2.53" width="0.7" height="0.85" depth="0.1" color="#a8d7e8"></a-box>
+        <a-box position="1 4.5 2.53" width="0.7" height="0.85" depth="0.1" color="#a8d7e8"></a-box>
+      </a-entity>
+      <a-entity class="city-block" position="7 0 -42">
+        <a-box position="0 3.6 0" width="4.3" height="7.2" depth="5" color="#a87580" material="roughness: 0.95"></a-box>
+        <a-box position="0 7.3 0" width="4.6" height="0.35" depth="5.25" color="#755667"></a-box>
+        <a-box position="-1.15 2.3 2.53" width="0.72" height="0.86" depth="0.1" color="#b5dce3"></a-box>
+        <a-box position="0 2.3 2.53" width="0.72" height="0.86" depth="0.1" color="#b5dce3"></a-box>
+        <a-box position="1.15 2.3 2.53" width="0.72" height="0.86" depth="0.1" color="#b5dce3"></a-box>
+        <a-box position="-1.15 4.6 2.53" width="0.72" height="0.86" depth="0.1" color="#b5dce3"></a-box>
+        <a-box position="0 4.6 2.53" width="0.72" height="0.86" depth="0.1" color="#b5dce3"></a-box>
+        <a-box position="1.15 4.6 2.53" width="0.72" height="0.86" depth="0.1" color="#b5dce3"></a-box>
+      </a-entity>
+      <a-entity class="city-block" position="-7 0 -52">
+        <a-box position="0 3.8 0" width="4.3" height="7.6" depth="5.2" color="#c47b58" material="roughness: 0.95"></a-box>
+        <a-box position="0 7.72 0" width="4.55" height="0.24" depth="5.4" color="#623f43"></a-box>
+        <a-box position="0 0.75 2.63" width="3.7" height="1.3" depth="0.12" color="#674b48"></a-box>
+        <a-box position="-1.35 2.7 2.63" width="0.78" height="0.85" depth="0.12" color="#abd9e5"></a-box>
+        <a-box position="0 2.7 2.63" width="0.78" height="0.85" depth="0.12" color="#abd9e5"></a-box>
+        <a-box position="1.35 2.7 2.63" width="0.78" height="0.85" depth="0.12" color="#abd9e5"></a-box>
+        <a-box position="-1.35 4.8 2.63" width="0.78" height="0.85" depth="0.12" color="#abd9e5"></a-box>
+        <a-box position="0 4.8 2.63" width="0.78" height="0.85" depth="0.12" color="#abd9e5"></a-box>
+        <a-box position="1.35 4.8 2.63" width="0.78" height="0.85" depth="0.12" color="#abd9e5"></a-box>
+      </a-entity>
+      <a-entity class="city-block" position="7 0 -57">
+        <a-box position="0 4.7 0" width="4.5" height="9.4" depth="5.4" color="#758b9c" material="roughness: 0.95"></a-box>
+        <a-box position="0 9.55 0" width="4.75" height="0.3" depth="5.6" color="#415768"></a-box>
+        <a-box position="-1.3 1.15 2.73" width="0.78" height="1.8" depth="0.12" color="#5b626c"></a-box>
+        <a-box position="0 1.15 2.73" width="0.78" height="1.8" depth="0.12" color="#5b626c"></a-box>
+        <a-box position="1.3 1.15 2.73" width="0.78" height="1.8" depth="0.12" color="#5b626c"></a-box>
+        <a-box position="-1.3 3.5 2.73" width="0.72" height="0.85" depth="0.12" color="#b7e0e7"></a-box>
+        <a-box position="0 3.5 2.73" width="0.72" height="0.85" depth="0.12" color="#b7e0e7"></a-box>
+        <a-box position="1.3 3.5 2.73" width="0.72" height="0.85" depth="0.12" color="#b7e0e7"></a-box>
+        <a-box position="-1.3 5.7 2.73" width="0.72" height="0.85" depth="0.12" color="#b7e0e7"></a-box>
+        <a-box position="0 5.7 2.73" width="0.72" height="0.85" depth="0.12" color="#b7e0e7"></a-box>
+        <a-box position="1.3 5.7 2.73" width="0.72" height="0.85" depth="0.12" color="#b7e0e7"></a-box>
+        <a-box position="-1.3 7.9 2.73" width="0.72" height="0.85" depth="0.12" color="#b7e0e7"></a-box>
+        <a-box position="0 7.9 2.73" width="0.72" height="0.85" depth="0.12" color="#b7e0e7"></a-box>
+        <a-box position="1.3 7.9 2.73" width="0.72" height="0.85" depth="0.12" color="#b7e0e7"></a-box>
+      </a-entity>
+      <a-entity id="street-lamp-left" position="-4.35 0 -12">
+        <a-cylinder position="0 2 0" radius="0.09" height="4" color="#343b45"></a-cylinder>
+        <a-box position="0.35 4 0" width="0.8" height="0.12" depth="0.13" color="#343b45"></a-box>
+        <a-sphere position="0.72 3.94 0" radius="0.18" color="#ffe28a" material="emissive: #ffce59; emissiveIntensity: 0.5"></a-sphere>
+      </a-entity>
+      <a-entity id="street-lamp-right" position="4.35 0 -25">
+        <a-cylinder position="0 2 0" radius="0.09" height="4" color="#343b45"></a-cylinder>
+        <a-box position="-0.35 4 0" width="0.8" height="0.12" depth="0.13" color="#343b45"></a-box>
+        <a-sphere position="-0.72 3.94 0" radius="0.18" color="#ffe28a" material="emissive: #ffce59; emissiveIntensity: 0.5"></a-sphere>
+      </a-entity>
+      <a-entity class="street-tree" position="-5.5 0 -8">
+        <a-cylinder position="0 0.9 0" radius="0.16" height="1.8" color="#69472d"></a-cylinder>
+        <a-sphere position="0 2.05 0" radius="0.95" color="#39764d" material="roughness: 1"></a-sphere>
+        <a-sphere position="-0.55 1.8 0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+        <a-sphere position="0.55 1.8 -0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+      </a-entity>
+      <a-entity class="street-tree" position="5.5 0 -16">
+        <a-cylinder position="0 0.9 0" radius="0.16" height="1.8" color="#69472d"></a-cylinder>
+        <a-sphere position="0 2.05 0" radius="0.95" color="#39764d" material="roughness: 1"></a-sphere>
+        <a-sphere position="-0.55 1.8 0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+        <a-sphere position="0.55 1.8 -0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+      </a-entity>
+      <a-entity class="street-tree" position="-5.5 0 -28">
+        <a-cylinder position="0 0.9 0" radius="0.16" height="1.8" color="#69472d"></a-cylinder>
+        <a-sphere position="0 2.05 0" radius="0.95" color="#39764d" material="roughness: 1"></a-sphere>
+        <a-sphere position="-0.55 1.8 0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+        <a-sphere position="0.55 1.8 -0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+      </a-entity>
+      <a-entity class="street-tree" position="5.5 0 -36">
+        <a-cylinder position="0 0.9 0" radius="0.16" height="1.8" color="#69472d"></a-cylinder>
+        <a-sphere position="0 2.05 0" radius="0.95" color="#39764d" material="roughness: 1"></a-sphere>
+        <a-sphere position="-0.55 1.8 0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+        <a-sphere position="0.55 1.8 -0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+      </a-entity>
+      <a-entity class="street-tree" position="-5.5 0 -48">
+        <a-cylinder position="0 0.9 0" radius="0.16" height="1.8" color="#69472d"></a-cylinder>
+        <a-sphere position="0 2.05 0" radius="0.95" color="#39764d" material="roughness: 1"></a-sphere>
+        <a-sphere position="-0.55 1.8 0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+        <a-sphere position="0.55 1.8 -0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+      </a-entity>
+      <a-entity class="street-tree" position="5.5 0 -56">
+        <a-cylinder position="0 0.9 0" radius="0.16" height="1.8" color="#69472d"></a-cylinder>
+        <a-sphere position="0 2.05 0" radius="0.95" color="#39764d" material="roughness: 1"></a-sphere>
+        <a-sphere position="-0.55 1.8 0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+        <a-sphere position="0.55 1.8 -0.05" radius="0.62" color="#4c8d55" material="roughness: 1"></a-sphere>
+      </a-entity>
+      <a-entity id="city-marker" position="0 0 -12">
+        <a-cylinder position="0 0.65 0" radius="0.12" height="1.3" color="#333b48"></a-cylinder>
+        <a-box position="0 1.38 0" width="1.1" height="0.42" depth="0.08" color="#f6f1dc"></a-box>
+        <a-text value="POLITIA" align="center" color="#274775" position="0 1.32 0.052" width="2.1"></a-text>
+        <a-box position="-0.34 0.15 0.45" width="1.6" height="0.16" depth="0.34" color="#4d7b55"></a-box>
+        <a-sphere position="-0.76 0.16 0.45" radius="0.22" color="#26303b"></a-sphere>
+        <a-sphere position="0.08 0.16 0.45" radius="0.22" color="#26303b"></a-sphere>
+      </a-entity>
+    </a-entity>
+
+    <a-entity id="runner-dog" position="0 0 1.5" rotation="0 180 0">
+      <a-entity id="dog-gltf" gltf-model="#azor-model-asset" visible="false"></a-entity>
+      <a-entity class="dog-body">
+        <a-sphere position="0 0.62 0" radius="0.5" scale="0.9 0.82 1.35" color="#bd7138" material="roughness: 0.9"></a-sphere>
+        <a-sphere position="0 0.5 0.57" radius="0.37" scale="0.9 0.76 0.9" color="#f4d6a5"></a-sphere>
+        <a-sphere position="0 1.02 0.72" radius="0.39" color="#bd7138" material="roughness: 0.9"></a-sphere>
+        <a-sphere position="0 0.87 1.04" radius="0.25" scale="1 0.72 1" color="#f4d6a5"></a-sphere>
+        <a-sphere position="0 0.91 1.25" radius="0.09" color="#201918"></a-sphere>
+        <a-sphere position="-0.17 1.1 1.04" radius="0.055" color="#171411"></a-sphere>
+        <a-sphere position="0.17 1.1 1.04" radius="0.055" color="#171411"></a-sphere>
+        <a-sphere position="-0.183 1.12 1.08" radius="0.018" color="white"></a-sphere>
+        <a-sphere position="0.157 1.12 1.08" radius="0.018" color="white"></a-sphere>
+        <a-sphere position="-0.28 1.25 0.67" rotation="0 0 -12" scale="0.14 0.31 0.12" color="#75401f"></a-sphere>
+        <a-sphere position="0.28 1.25 0.67" rotation="0 0 12" scale="0.14 0.31 0.12" color="#75401f"></a-sphere>
+        <a-cylinder position="0 0.84 0.68" rotation="90 0 0" radius="0.31" height="0.1" color="#31a7d8"></a-cylinder>
+        <a-sphere class="dog-tail" position="0 0.79 -0.75" rotation="25 0 0" scale="0.12 0.12 0.43" color="#75401f"></a-sphere>
+        <a-entity class="dog-leg" position="-0.29 0.4 0.48">
+          <a-cylinder position="0 -0.18 0" radius="0.105" height="0.4" color="#75401f"></a-cylinder>
+          <a-sphere position="0 -0.37 0.04" scale="0.13 0.09 0.19" color="#75401f"></a-sphere>
+        </a-entity>
+        <a-entity class="dog-leg" position="0.29 0.4 0.48">
+          <a-cylinder position="0 -0.18 0" radius="0.105" height="0.4" color="#75401f"></a-cylinder>
+          <a-sphere position="0 -0.37 0.04" scale="0.13 0.09 0.19" color="#75401f"></a-sphere>
+        </a-entity>
+        <a-entity class="dog-leg" position="-0.29 0.4 -0.48">
+          <a-cylinder position="0 -0.18 0" radius="0.105" height="0.4" color="#75401f"></a-cylinder>
+          <a-sphere position="0 -0.37 0.04" scale="0.13 0.09 0.19" color="#75401f"></a-sphere>
+        </a-entity>
+        <a-entity class="dog-leg" position="0.29 0.4 -0.48">
+          <a-cylinder position="0 -0.18 0" radius="0.105" height="0.4" color="#75401f"></a-cylinder>
+          <a-sphere position="0 -0.37 0.04" scale="0.13 0.09 0.19" color="#75401f"></a-sphere>
+        </a-entity>
+      </a-entity>
+    </a-entity>
+
+    <a-entity id="officer" position="-2.7 0 -7">
+      <a-cylinder position="0 0.72 0" radius="0.32" height="0.9" color="#244777"></a-cylinder>
+      <a-sphere position="0 1.42 0" radius="0.28" color="#d39a72"></a-sphere>
+      <a-sphere position="0 1.67 0" scale="1.25 0.48 1.15" color="#1e3c66"></a-sphere>
+      <a-cylinder position="-0.34 0.18 0" radius="0.12" height="0.4" color="#26303b"></a-cylinder>
+      <a-cylinder position="0.34 0.18 0" radius="0.12" height="0.4" color="#26303b"></a-cylinder>
+      <a-entity id="officer-arm" position="0.3 1.02 0.02" rotation="0 0 -20">
+        <a-cylinder position="0.23 0 0" rotation="0 0 -65" radius="0.1" height="0.52" color="#244777"></a-cylinder>
+        <a-sphere position="0.45 0.18 0" radius="0.12" color="#d39a72"></a-sphere>
+      </a-entity>
+    </a-entity>
+
+    <a-entity id="thief" position="0 0 -7">
+      <a-entity id="thief-gltf" gltf-model="#thief-model-asset" visible="false"></a-entity>
+      <a-entity id="thief-procedural">
+        <a-cylinder position="0 0.62 0" radius="0.28" height="0.76" color="#303747"></a-cylinder>
+        <a-sphere position="0 1.17 0" radius="0.25" color="#bd8967"></a-sphere>
+        <a-sphere position="0 1.18 0.17" scale="1.05 0.48 0.45" color="#25303b"></a-sphere>
+        <a-sphere position="-0.1 1.22 0.3" radius="0.025" color="#f7f4e9"></a-sphere>
+        <a-sphere position="0.1 1.22 0.3" radius="0.025" color="#f7f4e9"></a-sphere>
+        <a-entity class="thief-leg" position="-0.14 0.29 0">
+          <a-cylinder position="0 -0.17 0" radius="0.09" height="0.35" color="#202633"></a-cylinder>
+        </a-entity>
+        <a-entity class="thief-leg" position="0.14 0.29 0">
+          <a-cylinder position="0 -0.17 0" radius="0.09" height="0.35" color="#202633"></a-cylinder>
+        </a-entity>
+        <a-entity position="-0.43 0.76 0">
+          <a-box position="0 0.12 0" width="0.38" height="0.32" depth="0.12" color="#765032"></a-box>
+          <a-box position="0 0.3 0" width="0.4" height="0.08" depth="0.14" color="#d2a45e"></a-box>
+        </a-entity>
+      </a-entity>
+    </a-entity>
+
+    <a-entity id="runner-objects"></a-entity>
+    <a-entity light="type: ambient; color: #e4f2ff; intensity: 1.05"></a-entity>
+    <a-entity light="type: directional; color: #fff2d5; intensity: 1.8; castShadow: true; shadowMapWidth: 1024; shadowMapHeight: 1024" position="-5 9 5"></a-entity>
+    <a-entity id="ar-reticle" visible="false">
+      <a-ring position="0 0.01 0" rotation="-90 0 0" radius-inner="0.12" radius-outer="0.16" color="#32f5c2" material="shader: flat; transparent: true; opacity: 0.95"></a-ring>
+    </a-entity>
+    <a-entity camera position="0 6.2 10.5" rotation="-23 0 0" fov="72" look-controls="enabled: false"></a-entity>
+  </a-scene>
+
+  <script>
+    const distanceElement = document.getElementById('distance');
+    const bonesElement = document.getElementById('bones');
+    const coinsElement = document.getElementById('coins');
+    const giftsElement = document.getElementById('gifts');
+    const levelElement = document.getElementById('level');
+    const bestScoreElement = document.getElementById('best-score');
+    const messageElement = document.getElementById('message');
+    const powerStatusElement = document.getElementById('power-status');
+    const startButton = document.getElementById('start-button');
+    const arButton = document.getElementById('ar-button');
+    const arSizeInput = document.getElementById('ar-size');
+    const arSizeControls = document.getElementById('ar-size-controls');
+    const arSizeReadout = document.getElementById('ar-size-readout');
+    const uiOverlay = document.getElementById('ui-overlay');
+    const sceneElement = document.querySelector('a-scene');
+    const skyElement = document.querySelector('a-sky');
+    let bestDistance = 0;
+
+    try {
+      bestDistance = Number(localStorage.getItem('azor_city_best_distance')) || 0;
+    } catch (error) {
+      console.warn('Recordul local nu poate fi citit.', error);
+    }
+    bestScoreElement.textContent = bestDistance;
+
+    AFRAME.registerComponent('endless-runner', {
+      init: function () {
+        this.dog = document.getElementById('runner-dog');
+        this.dogBody = this.dog.querySelector('.dog-body');
+        this.dogLegs = Array.from(this.dog.querySelectorAll('.dog-leg'));
+        this.dogTail = this.dog.querySelector('.dog-tail');
+        this.dogModel = document.getElementById('dog-gltf');
+        this.dogModelLoaded = false;
+        this.dogModel.addEventListener('model-loaded', () => {
+          if (!AFRAME.components['animation-mixer']) {
+            console.error('Lipseste componenta animation-mixer; se folosește modelul procedural animat.');
+            return;
+          }
+          this.dogModelLoaded = true;
+          this.dogBody.object3D.visible = false;
+          this.dogModel.object3D.visible = true;
+          this.setCharacterAnimation(
+            this.dogModel,
+            this.jumping ? 'Jump' : this.active ? 'Run' : 'Idle',
+            this.jumping ? 'once' : 'repeat');
+        });
+        this.dogModel.addEventListener('model-error', event => {
+          console.error('Modelul GLB animat al lui Azor nu a putut fi încărcat.', event.detail);
+        });
+        this.thief = document.getElementById('thief');
+        this.thiefModel = document.getElementById('thief-gltf');
+        this.thiefFallback = document.getElementById('thief-procedural');
+        this.thiefModelLoaded = false;
+        this.thiefModel.addEventListener('model-loaded', () => {
+          if (!AFRAME.components['animation-mixer']) {
+            console.error('Lipseste componenta animation-mixer; se folosește modelul procedural animat.');
+            return;
+          }
+          this.thiefModelLoaded = true;
+          this.thiefFallback.object3D.visible = false;
+          this.thiefModel.object3D.visible = true;
+          this.setCharacterAnimation(
+            this.thiefModel,
+            this.active && !this.thief.object3D.userData.launchStarted ? 'Run' : 'Idle');
+        });
+        this.thiefModel.addEventListener('model-error', event => {
+          console.error('Modelul GLB animat al infractorului nu a putut fi încărcat.', event.detail);
+        });
+        this.thiefLegs = Array.from(this.thief.querySelectorAll('.thief-leg'));
+        this.officerArm = document.getElementById('officer-arm');
+        this.cityRoot = document.getElementById('city');
+        this.buildDistantSkyline();
+        this.buildCityBuildings();
+        this.cityBlocks = Array.from(document.querySelectorAll('.city-block'));
+        this.roadsideTrees = Array.from(document.querySelectorAll('.street-tree'));
+        this.cityBlocks.forEach(block => {
+          block.object3D.userData.startZ = block.object3D.position.z;
+        });
+        this.roadsideTrees.forEach(tree => {
+          tree.object3D.userData.startZ = tree.object3D.position.z;
+        });
+        this.lamps = [
+          document.getElementById('street-lamp-left'),
+          document.getElementById('street-lamp-right')
+        ];
+        this.lamps.forEach(lamp => {
+          lamp.object3D.userData.startZ = lamp.object3D.position.z;
+        });
+        this.cityMarker = document.getElementById('city-marker');
+        this.cityMarker.object3D.userData.startZ = this.cityMarker.object3D.position.z;
+        this.objectsRoot = document.getElementById('runner-objects');
+        this.lanes = [-2.2, 0, 2.2];
+        this.lane = 1;
+        this.targetLane = 1;
+        this.speed = 10;
+        this.distance = 0;
+        this.bones = 0;
+        this.coins = 0;
+        this.gifts = 0;
+        this.shieldCharges = 0;
+        this.magnetUntil = 0;
+        this.doubleUntil = 0;
+        this.level = 1;
+        this.jumping = false;
+        this.jumpStarted = 0;
+        this.jumpDuration = 820;
+        this.active = false;
+        this.thiefCaught = false;
+        this.objects = [];
+        this.spawnIndex = 0;
+        this.lastSoundAt = 0;
+        this.lastTime = 0;
+        this.touchStart = null;
+        this.tiltButton = document.getElementById('tilt-button');
+        this.tiltEnabled = false;
+        this.tiltBaseline = null;
+        this.smoothedTilt = 0;
+        this.screenOrientationAngle = this.getScreenOrientationAngle();
+        this.jumpButton = document.getElementById('jump-button');
+        this.arButton = arButton;
+        this.arReticle = document.getElementById('ar-reticle');
+        this.arWorld = new THREE.Group();
+        this.arWorld.name = 'ar-placed-city';
+        this.arWorld.visible = true;
+        this.arScale = Number(arSizeInput.value);
+        this.updateARSize = () => {
+          this.arScale = Number(arSizeInput.value);
+          const width = (100 * this.arScale).toFixed(1).replace('.', ',');
+          const length = (180 * this.arScale).toFixed(1).replace('.', ',');
+          const footprint = 100 * this.arScale <= 1.2 ? 'masă mică' : 'podea / spațiu mare';
+          arSizeReadout.value = `${width} × ${length} m · ${footprint}`;
+          arSizeReadout.textContent = arSizeReadout.value;
+          if (this.arSession && this.arPlaced) {
+            this.arWorld.scale.setScalar(this.arScale);
+          }
+        };
+        this.updateARSize();
+        arSizeInput.addEventListener('input', this.updateARSize);
+        sceneElement.object3D.add(this.arWorld);
+        const cameraObject = sceneElement.querySelector('[camera]').object3D;
+        Array.from(sceneElement.object3D.children).forEach(child => {
+          if (child !== this.arWorld && child !== cameraObject && child !== this.arReticle.object3D) {
+            this.arWorld.attach(child);
+          }
+        });
+        this.arSession = null;
+        this.hitTestSource = null;
+        this.localReferenceSpace = null;
+        this.latestHitPose = null;
+        this.groundHitCandidate = null;
+        this.groundHitStability = 0;
+        this.arPlaced = false;
+        this.placeARWorld = () => {
+          if (!this.arSession || this.arPlaced || !this.latestHitPose) {
+            return;
+          }
+          const { position, orientation } = this.latestHitPose;
+          this.arWorld.position.set(position.x, position.y, position.z);
+          this.arWorld.quaternion.set(orientation.x, orientation.y, orientation.z, orientation.w);
+          this.arWorld.scale.setScalar(this.arScale);
+          this.arWorld.visible = true;
+          this.arReticle.object3D.visible = false;
+          this.arPlaced = true;
+          startButton.hidden = false;
+          messageElement.textContent = 'Șoseaua este plasată pe podea. Apasă „Pornește urmărirea”!';
+        };
+        this.handleARPlacement = event => {
+          if (event.target.closest && event.target.closest('button, a, input, label, #ar-size-controls')) {
+            return;
+          }
+          this.placeARWorld();
+        };
+        this.handleXRFrame = (time, frame) => {
+          if (!this.arSession || this.arSession !== frame.session) {
+            return;
+          }
+          if (!this.arPlaced && this.hitTestSource) {
+            const hits = frame.getHitTestResults(this.hitTestSource);
+            let floorPose = null;
+            for (const hit of hits) {
+              const pose = hit.getPose(this.localReferenceSpace);
+              if (pose && this.isHorizontalSurface(pose)) {
+                floorPose = pose;
+                break;
+              }
+            }
+            if (floorPose) {
+              const transform = floorPose.transform;
+              const normal = new THREE.Vector3(0, 1, 0).applyQuaternion(
+                new THREE.Quaternion(
+                  transform.orientation.x,
+                  transform.orientation.y,
+                  transform.orientation.z,
+                  transform.orientation.w
+                )
+              ).normalize();
+              if (!this.groundHitCandidate
+                || Math.abs(transform.position.y - this.groundHitCandidate.height) > 0.25
+                || normal.dot(this.groundHitCandidate.normal) < 0.94) {
+                this.groundHitCandidate = { height: transform.position.y, normal };
+                this.groundHitStability = 0;
+              } else {
+                this.groundHitStability += 1;
+              }
+              if (this.groundHitStability >= 5) {
+                this.latestHitPose = {
+                  position: {
+                    x: transform.position.x,
+                    y: transform.position.y,
+                    z: transform.position.z
+                  },
+                  orientation: {
+                    x: transform.orientation.x,
+                    y: transform.orientation.y,
+                    z: transform.orientation.z,
+                    w: transform.orientation.w
+                  }
+                };
+                this.arReticle.object3D.matrixAutoUpdate = false;
+                this.arReticle.object3D.matrix.fromArray(transform.matrix);
+                this.arReticle.object3D.matrixWorldNeedsUpdate = true;
+                this.arReticle.object3D.visible = true;
+              } else {
+                this.latestHitPose = null;
+                this.arReticle.object3D.visible = false;
+              }
+            } else {
+              this.latestHitPose = null;
+              this.groundHitCandidate = null;
+              this.groundHitStability = 0;
+              this.arReticle.object3D.visible = false;
+            }
+          }
+          this.arSession.requestAnimationFrame(this.handleXRFrame);
+        };
+        this.isHorizontalSurface = function (pose) {
+          const { orientation } = pose.transform;
+          const normal = new THREE.Vector3(0, 1, 0).applyQuaternion(
+            new THREE.Quaternion(orientation.x, orientation.y, orientation.z, orientation.w)
+          );
+          return normal.y >= Math.cos(20 * Math.PI / 180);
+        };
+        this.handleSessionEnd = () => {
+          if (this.arSession) {
+            this.arSession.removeEventListener('select', this.placeARWorld);
+          }
+          this.arSession = null;
+          this.hitTestSource = null;
+          this.localReferenceSpace = null;
+          this.latestHitPose = null;
+          this.groundHitCandidate = null;
+          this.groundHitStability = 0;
+          this.arPlaced = false;
+          this.arReticle.object3D.visible = false;
+          this.arReticle.object3D.matrixAutoUpdate = true;
+          this.arWorld.visible = true;
+          this.arWorld.position.set(0, 0, 0);
+          this.arWorld.quaternion.identity();
+          this.arWorld.scale.setScalar(1);
+          arSizeControls.hidden = true;
+          skyElement.object3D.visible = true;
+          sceneElement.setAttribute('background', 'color: #87c6e7; transparent: false');
+          sceneElement.setAttribute('fog', 'type: exponential; color: #87c6e7; density: 0.003');
+          sceneElement.renderer.setClearAlpha(1);
+          this.arButton.textContent = '📱 Plasează șoseaua pe podea';
+          startButton.hidden = false;
+          messageElement.textContent = 'Modul AR s-a încheiat. Poți continua jocul 3D.';
+        };
+        this.arButton.addEventListener('click', () => this.toggleAR());
+        document.addEventListener('pointerdown', this.handleARPlacement);
+        this.handleKeyDown = event => {
+          if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') {
+            event.preventDefault();
+            this.changeLane(-1);
+          } else if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') {
+            event.preventDefault();
+            this.changeLane(1);
+          } else if (event.key === 'ArrowUp' || event.key === ' ' || event.key.toLowerCase() === 'w') {
+            event.preventDefault();
+            this.jump();
+          }
+        };
+        this.handleDeviceOrientation = event => {
+          if (!this.tiltEnabled || !Number.isFinite(event.gamma) || !Number.isFinite(event.beta)) {
+            return;
+          }
+          const angle = this.getScreenOrientationAngle() * Math.PI / 180;
+          const horizontalTilt = event.gamma * Math.cos(angle) - event.beta * Math.sin(angle);
+          if (this.tiltBaseline === null) {
+            this.tiltBaseline = horizontalTilt;
+            messageElement.textContent = 'Înclinare calibrată. Înclină telefonul stânga/dreapta pentru a schimba banda.';
+            return;
+          }
+          this.smoothedTilt += (horizontalTilt - this.tiltBaseline - this.smoothedTilt) * 0.25;
+          this.applyTiltLane(this.smoothedTilt);
+        };
+        this.handleScreenOrientationChange = () => {
+          this.screenOrientationAngle = this.getScreenOrientationAngle();
+          this.tiltBaseline = null;
+          this.smoothedTilt = 0;
+        };
+        this.handleTouchStart = event => {
+          const touch = event.changedTouches[0];
+          this.touchStart = { x: touch.clientX, y: touch.clientY };
+        };
+        this.handleTouchEnd = event => {
+          if (!this.touchStart) {
+            return;
+          }
+          const touch = event.changedTouches[0];
+          const dx = touch.clientX - this.touchStart.x;
+          const dy = touch.clientY - this.touchStart.y;
+          if (!this.tiltEnabled && Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy)) {
+            this.changeLane(dx < 0 ? -1 : 1);
+          } else if (dy < -25) {
+            this.jump();
+          }
+          this.touchStart = null;
+        };
+        window.addEventListener('keydown', this.handleKeyDown);
+        window.addEventListener('touchstart', this.handleTouchStart, { passive: true });
+        window.addEventListener('touchend', this.handleTouchEnd, { passive: true });
+        this.tiltButton.addEventListener('click', () => this.toggleTiltControls());
+        window.addEventListener('orientationchange', this.handleScreenOrientationChange);
+        if (screen.orientation && typeof screen.orientation.addEventListener === 'function') {
+          screen.orientation.addEventListener('change', this.handleScreenOrientationChange);
+        }
+        this.jumpButton.addEventListener('click', () => this.jump());
+        startButton.addEventListener('click', () => this.startGame());
+        this.buildObjects();
+        this.reset();
+      },
+
+      getScreenOrientationAngle: function () {
+        return screen.orientation ? screen.orientation.angle : (window.orientation || 0);
+      },
+
+      toggleTiltControls: async function () {
+        if (this.tiltEnabled) {
+          window.removeEventListener('deviceorientation', this.handleDeviceOrientation);
+          this.tiltEnabled = false;
+          this.tiltBaseline = null;
+          this.smoothedTilt = 0;
+          this.tiltButton.textContent = 'Înclinare';
+          this.tiltButton.setAttribute('aria-label', 'Activează comenzile prin înclinarea telefonului');
+          messageElement.textContent = 'Controlul prin înclinare este oprit. Poți folosi glisarea pe ecran sau tastatura.';
+          return;
+        }
+        if (!window.isSecureContext) {
+          messageElement.textContent = 'Senzorii telefonului necesită HTTPS sau localhost. Tastatura și glisarea rămân disponibile.';
+          return;
+        }
+        if (!window.DeviceOrientationEvent) {
+          messageElement.textContent = 'Acest dispozitiv nu oferă senzor de orientare. Folosește glisarea pe ecran sau tastatura.';
+          return;
+        }
+        try {
+          if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            const permission = await DeviceOrientationEvent.requestPermission();
+            if (permission !== 'granted') {
+              messageElement.textContent = 'Permisiunea pentru senzorul de orientare a fost refuzată. Poți folosi glisarea sau tastatura.';
+              return;
+            }
+          }
+          this.tiltEnabled = true;
+          this.tiltBaseline = null;
+          this.smoothedTilt = 0;
+          window.addEventListener('deviceorientation', this.handleDeviceOrientation);
+          this.tiltButton.textContent = 'Oprește înclinarea';
+          this.tiltButton.setAttribute('aria-label', 'Oprește comenzile prin înclinarea telefonului');
+          messageElement.textContent = 'Ține telefonul drept o clipă pentru calibrare, apoi înclină-l stânga/dreapta.';
+        } catch (error) {
+          console.error('Accesul la senzorul de orientare a eșuat.', error);
+          messageElement.textContent = 'Nu s-a putut activa senzorul. Verifică permisiunea browserului; poți folosi glisarea sau tastatura.';
+        }
+      },
+
+      applyTiltLane: function (tilt) {
+        if (!this.active) {
+          return;
+        }
+        if (tilt <= -14) {
+          this.targetLane = 0;
+        } else if (tilt >= 14) {
+          this.targetLane = 2;
+        } else if (Math.abs(tilt) <= 8) {
+          this.targetLane = 1;
+        }
+      },
+
+      toggleAR: async function () {
+        if (this.arSession) {
+          await this.arSession.end();
+          return;
+        }
+        if (!navigator.xr) {
+          messageElement.textContent = 'WebXR nu este disponibil. Deschide jocul pe un dispozitiv compatibil, prin HTTPS sau localhost.';
+          return;
+        }
+        try {
+          const session = await navigator.xr.requestSession('immersive-ar', {
+            requiredFeatures: ['hit-test'],
+            optionalFeatures: ['local-floor', 'dom-overlay'],
+            domOverlay: { root: uiOverlay }
+          });
+          this.arSession = session;
+          session.addEventListener('end', this.handleSessionEnd, { once: true });
+          session.addEventListener('select', this.placeARWorld);
+          let referenceSpaceType = 'local-floor';
+          try {
+            await session.requestReferenceSpace(referenceSpaceType);
+          } catch (error) {
+            referenceSpaceType = 'local';
+            await session.requestReferenceSpace(referenceSpaceType);
+          }
+          sceneElement.renderer.xr.setReferenceSpaceType(referenceSpaceType);
+          sceneElement.renderer.xr.enabled = true;
+          await sceneElement.renderer.xr.setSession(session);
+          const viewerSpace = await session.requestReferenceSpace('viewer');
+          this.localReferenceSpace = sceneElement.renderer.xr.getReferenceSpace();
+          this.hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+          this.latestHitPose = null;
+          this.groundHitCandidate = null;
+          this.groundHitStability = 0;
+          this.arPlaced = false;
+          this.arWorld.visible = false;
+          arSizeControls.hidden = false;
+          this.arReticle.object3D.visible = false;
+          skyElement.object3D.visible = false;
+          sceneElement.setAttribute('background', 'color: #000000; transparent: true');
+          sceneElement.setAttribute('fog', 'type: exponential; color: #87c6e7; density: 0');
+          sceneElement.renderer.setClearAlpha(0);
+          this.arButton.textContent = 'Ieși din modul AR';
+          startButton.hidden = true;
+          messageElement.textContent = 'Scanez podeaua. Mișcă telefonul încet; când inelul verde rămâne stabil, atinge ecranul.';
+          session.requestAnimationFrame(this.handleXRFrame);
+        } catch (error) {
+          console.error('Modul WebXR AR nu a putut fi pornit.', error);
+          if (this.arSession) {
+            this.arSession.removeEventListener('end', this.handleSessionEnd);
+            this.arSession.removeEventListener('select', this.placeARWorld);
+            try {
+              await this.arSession.end();
+            } catch (endError) {
+              console.warn('Sesiunea WebXR nu a putut fi închisă după eroare.', endError);
+            }
+            this.arSession = null;
+          }
+          this.arWorld.visible = true;
+          this.arWorld.position.set(0, 0, 0);
+          this.arWorld.quaternion.identity();
+          this.arWorld.scale.setScalar(1);
+          arSizeControls.hidden = true;
+          this.arReticle.object3D.visible = false;
+          this.arPlaced = false;
+          this.latestHitPose = null;
+          skyElement.object3D.visible = true;
+          sceneElement.setAttribute('background', 'color: #87c6e7; transparent: false');
+          sceneElement.setAttribute('fog', 'type: exponential; color: #87c6e7; density: 0.003');
+          sceneElement.renderer.setClearAlpha(1);
+          this.arButton.textContent = '📱 Plasează șoseaua pe podea';
+          startButton.hidden = false;
+          messageElement.textContent = 'Nu s-a putut porni AR. Verifică permisiunea camerei, HTTPS și suportul pentru WebXR hit-test.';
+        }
+      },
+
+      setCharacterAnimation: function (model, clip, loop = 'repeat') {
+        model.setAttribute('animation-mixer', {
+          clip,
+          loop,
+          crossFadeDuration: 0.18
+        });
+      },
+
+      buildDistantSkyline: function () {
+        this.skyline = document.getElementById('distant-skyline');
+        const colors = ['#60798d', '#6b8293', '#5a7488', '#788b98', '#657c8e'];
+        for (let index = 0; index < 45; index += 1) {
+          const building = document.createElement('a-entity');
+          const width = 2.6 + (index * 7 % 13) / 10;
+          const height = 12 + (index * 11 % 25);
+          const z = -88 - (index % 3) * 5;
+          building.setAttribute('position', `${-48 + index * 2.2} 0 ${z}`);
+
+          const tower = document.createElement('a-box');
+          tower.setAttribute('position', `0 ${height / 2} 0`);
+          tower.setAttribute('width', String(width));
+          tower.setAttribute('height', String(height));
+          tower.setAttribute('depth', '5');
+          tower.setAttribute('color', colors[index % colors.length]);
+          tower.setAttribute('material', 'roughness: 0.96');
+          building.appendChild(tower);
+
+          if (index % 4 === 1) {
+            const roof = document.createElement('a-box');
+            roof.setAttribute('position', `0 ${height + 0.6} 0`);
+            roof.setAttribute('width', String(width * 0.44));
+            roof.setAttribute('height', '1.2');
+            roof.setAttribute('depth', '2.2');
+            roof.setAttribute('color', '#586e7d');
+            building.appendChild(roof);
+          }
+          this.skyline.appendChild(building);
+        }
+      },
+
+      buildObjects: function () {
+        const patterns = [
+          { type: 'barrier', lane: 1 },
+          { type: 'bones', lane: 0 },
+          { type: 'coin', lane: 2 },
+          { type: 'car', lane: 0 },
+          { type: 'bones', lane: 2 },
+          { type: 'coin', lane: 1 },
+          { type: 'barrier', lane: 2 },
+          { type: 'bones', lane: 1 },
+          { type: 'car', lane: 2 },
+          { type: 'hurdle', lane: 1 },
+          { type: 'coin', lane: 2 },
+          { type: 'barrier', lane: 1 },
+          { type: 'car', lane: 1 },
+          { type: 'bones', lane: 0 },
+          { type: 'coin', lane: 1 },
+          { type: 'car', lane: 0 },
+          { type: 'gift', lane: 2 },
+          { type: 'bones', lane: 1 },
+          { type: 'gift', lane: 0 },
+          { type: 'coin', lane: 2 },
+          { type: 'gift', lane: 1 }
+        ];
+        patterns.forEach((item, index) => {
+          const object = this.createObject(item.type, item.lane);
+          object.position.z = -18 - index * 8;
+          this.objects.push(object);
+        });
+      },
+
+      buildCityBuildings: function () {
+        const colors = ['#d29a6e', '#76969a', '#b67c88', '#c4b47a', '#8297ae', '#9c806b'];
+        for (let index = 0; index < 8; index += 1) {
+          const side = index % 2 === 0 ? -1 : 1;
+          const level = Math.floor(index / 2);
+          const width = 3.8 + (index % 3) * 0.35;
+          const height = 5.2 + ((index * 3) % 5) * 1.05;
+          const depth = 4.8 + (index % 2) * 0.4;
+          const building = document.createElement('a-entity');
+          building.classList.add('city-block');
+          building.setAttribute('position', `${side * 7.25} 0 ${-70 - level * 17}`);
+
+          const shell = document.createElement('a-box');
+          shell.setAttribute('position', `0 ${height / 2} 0`);
+          shell.setAttribute('width', String(width));
+          shell.setAttribute('height', String(height));
+          shell.setAttribute('depth', String(depth));
+          shell.setAttribute('color', colors[index % colors.length]);
+          shell.setAttribute('material', 'roughness: 0.95');
+          building.appendChild(shell);
+
+          const roof = document.createElement('a-box');
+          roof.setAttribute('position', `0 ${height + 0.12} 0`);
+          roof.setAttribute('width', String(width + 0.28));
+          roof.setAttribute('height', '0.24');
+          roof.setAttribute('depth', String(depth + 0.25));
+          roof.setAttribute('color', index % 2 === 0 ? '#584c50' : '#596d73');
+          building.appendChild(roof);
+
+          const floors = Math.floor((height - 1.2) / 1.8);
+          const columns = width > 4 ? 3 : 2;
+          for (let floor = 0; floor < floors; floor += 1) {
+            for (let column = 0; column < columns; column += 1) {
+              const windowBox = document.createElement('a-box');
+              const x = (column - (columns - 1) / 2) * (width / (columns + 0.6));
+              const y = 1.5 + floor * 1.8;
+              windowBox.setAttribute('position', `${x} ${y} ${depth / 2 + 0.055}`);
+              windowBox.setAttribute('width', '0.62');
+              windowBox.setAttribute('height', '0.82');
+              windowBox.setAttribute('depth', '0.08');
+              windowBox.setAttribute('color', index % 3 === 0 ? '#f2d89b' : '#a9d8e6');
+              windowBox.setAttribute('material', 'metalness: 0.12; roughness: 0.42');
+              building.appendChild(windowBox);
+            }
+          }
+
+          const storefront = document.createElement('a-box');
+          storefront.setAttribute('position', `0 0.78 ${depth / 2 + 0.06}`);
+          storefront.setAttribute('width', String(width * 0.76));
+          storefront.setAttribute('height', '1.35');
+          storefront.setAttribute('depth', '0.1');
+          storefront.setAttribute('color', index % 2 === 0 ? '#53636a' : '#70564d');
+          building.appendChild(storefront);
+
+          const awning = document.createElement('a-box');
+          awning.setAttribute('position', `0 1.55 ${depth / 2 + 0.19}`);
+          awning.setAttribute('width', String(width * 0.84));
+          awning.setAttribute('height', '0.16');
+          awning.setAttribute('depth', '0.42');
+          awning.setAttribute('color', index % 2 === 0 ? '#d95f54' : '#e5c15d');
+          building.appendChild(awning);
+          this.cityRoot.appendChild(building);
+        }
+
+        for (let index = 0; index < 10; index += 1) {
+          const tree = document.createElement('a-entity');
+          tree.classList.add('street-tree');
+          const side = index % 2 === 0 ? -1 : 1;
+          tree.setAttribute('position', `${side * 5.5} 0 ${-64 - Math.floor(index / 2) * 17}`);
+          const trunk = document.createElement('a-cylinder');
+          trunk.setAttribute('position', '0 0.9 0');
+          trunk.setAttribute('radius', '0.17');
+          trunk.setAttribute('height', '1.8');
+          trunk.setAttribute('color', '#69472d');
+          tree.appendChild(trunk);
+          [
+            ['0 2.05 0', '0.98', '#39764d'],
+            ['-0.55 1.8 0.05', '0.62', '#4c8d55'],
+            ['0.55 1.8 -0.05', '0.62', '#5b965a']
+          ].forEach(([position, radius, color]) => {
+            const crown = document.createElement('a-sphere');
+            crown.setAttribute('position', position);
+            crown.setAttribute('radius', radius);
+            crown.setAttribute('color', color);
+            crown.setAttribute('material', 'roughness: 1');
+            tree.appendChild(crown);
+          });
+          this.cityRoot.appendChild(tree);
+        }
+      },
+
+      createObject: function (type, lane) {
+        const object = document.createElement('a-entity');
+        object.dataset.type = type;
+        object.dataset.lane = String(lane);
+        object.setAttribute('position', `${this.lanes[lane]} 0 0`);
+        if (type === 'gift') {
+          const giftColors = ['#df4b54', '#428bd1', '#a65bd1'];
+          const giftIndex = this.objects.length % giftColors.length;
+          object.dataset.giftKind = ['shield', 'magnet', 'double'][giftIndex];
+          const box = document.createElement('a-box');
+          box.setAttribute('position', '0 0.82 0');
+          box.setAttribute('width', '0.72');
+          box.setAttribute('height', '0.72');
+          box.setAttribute('depth', '0.62');
+          box.setAttribute('color', giftColors[giftIndex]);
+          box.setAttribute('material', 'metalness: 0.12; roughness: 0.32');
+          box.setAttribute('shadow', 'cast: true; receive: true');
+          object.appendChild(box);
+          const ribbon = document.createElement('a-box');
+          ribbon.setAttribute('position', '0 0.82 0.325');
+          ribbon.setAttribute('width', '0.13');
+          ribbon.setAttribute('height', '0.74');
+          ribbon.setAttribute('depth', '0.035');
+          ribbon.setAttribute('color', '#ffe58a');
+          object.appendChild(ribbon);
+          const crossRibbon = document.createElement('a-box');
+          crossRibbon.setAttribute('position', '0 0.82 0.33');
+          crossRibbon.setAttribute('width', '0.74');
+          crossRibbon.setAttribute('height', '0.13');
+          crossRibbon.setAttribute('depth', '0.04');
+          crossRibbon.setAttribute('color', '#ffe58a');
+          object.appendChild(crossRibbon);
+          const bow = document.createElement('a-torus');
+          bow.setAttribute('position', '0 1.22 0');
+          bow.setAttribute('radius', '0.16');
+          bow.setAttribute('radius-tubular', '0.045');
+          bow.setAttribute('color', '#ffe58a');
+          object.appendChild(bow);
+          object.setAttribute('animation__gift', 'property: rotation.y; to: 360; loop: true; dur: 2300; easing: linear');
+        } else if (type === 'car') {
+          const palette = ['#e24b43', '#3180bd', '#f0b931', '#f1f0e9'];
+          const color = palette[this.objects.length % palette.length];
+          const chassis = document.createElement('a-box');
+          chassis.setAttribute('position', '0 0.52 0');
+          chassis.setAttribute('width', '1.55');
+          chassis.setAttribute('height', '0.62');
+          chassis.setAttribute('depth', '2.35');
+          chassis.setAttribute('color', color);
+          chassis.setAttribute('shadow', 'cast: true; receive: true');
+          object.appendChild(chassis);
+          const cabin = document.createElement('a-box');
+          cabin.setAttribute('position', '0 0.98 -0.08');
+          cabin.setAttribute('width', '1.15');
+          cabin.setAttribute('height', '0.55');
+          cabin.setAttribute('depth', '1.18');
+          cabin.setAttribute('color', '#82b9ce');
+          cabin.setAttribute('material', 'metalness: 0.15; roughness: 0.35');
+          object.appendChild(cabin);
+          for (const z of [-0.76, 0.76]) {
+            for (const x of [-0.72, 0.72]) {
+              const wheel = document.createElement('a-cylinder');
+              wheel.setAttribute('position', `${x} 0.27 ${z}`);
+              wheel.setAttribute('rotation', '0 0 90');
+              wheel.setAttribute('radius', '0.24');
+              wheel.setAttribute('height', '0.14');
+              wheel.setAttribute('color', '#252b33');
+              object.appendChild(wheel);
+            }
+          }
+          const light = document.createElement('a-box');
+          light.setAttribute('position', '0 0.56 1.19');
+          light.setAttribute('width', '0.9');
+          light.setAttribute('height', '0.11');
+          light.setAttribute('depth', '0.04');
+          light.setAttribute('color', '#fff0bd');
+          object.appendChild(light);
+        } else if (type === 'barrier') {
+          const base = document.createElement('a-box');
+          base.setAttribute('position', '0 0.55 0');
+          base.setAttribute('width', '1.25');
+          base.setAttribute('height', '1.1');
+          base.setAttribute('depth', '0.55');
+          base.setAttribute('color', '#db7655');
+          base.setAttribute('shadow', 'cast: true; receive: true');
+          object.appendChild(base);
+          const stripe = document.createElement('a-box');
+          stripe.setAttribute('position', '0 0.56 0.29');
+          stripe.setAttribute('width', '1.28');
+          stripe.setAttribute('height', '0.2');
+          stripe.setAttribute('depth', '0.04');
+          stripe.setAttribute('color', '#f9d46a');
+          object.appendChild(stripe);
+          const label = document.createElement('a-text');
+          label.setAttribute('value', 'LUCRĂRI');
+          label.setAttribute('align', 'center');
+          label.setAttribute('color', '#fff');
+          label.setAttribute('position', '0 0.58 0.33');
+          label.setAttribute('width', '2');
+          object.appendChild(label);
+        } else if (type === 'hurdle') {
+          const hurdle = document.createElement('a-box');
+          hurdle.setAttribute('position', '0 0.42 0');
+          hurdle.setAttribute('width', '1.35');
+          hurdle.setAttribute('height', '0.72');
+          hurdle.setAttribute('depth', '0.5');
+          hurdle.setAttribute('color', '#536c90');
+          hurdle.setAttribute('shadow', 'cast: true; receive: true');
+          object.appendChild(hurdle);
+          const stripe = document.createElement('a-box');
+          stripe.setAttribute('position', '0 0.44 0.26');
+          stripe.setAttribute('width', '1.38');
+          stripe.setAttribute('height', '0.16');
+          stripe.setAttribute('depth', '0.04');
+          stripe.setAttribute('color', '#f4d35e');
+          object.appendChild(stripe);
+        } else if (type === 'bones') {
+          const bone = document.createElement('a-entity');
+          bone.setAttribute('position', '0 0.85 0');
+          bone.setAttribute('rotation', '0 0 90');
+          const shaft = document.createElement('a-cylinder');
+          shaft.setAttribute('radius', '0.1');
+          shaft.setAttribute('height', '0.72');
+          shaft.setAttribute('color', '#fff1c1');
+          bone.appendChild(shaft);
+          [-0.31, 0.31].forEach(x => {
+            [-1, 1].forEach(side => {
+              const end = document.createElement('a-sphere');
+              end.setAttribute('position', `${x} ${side * 0.09} 0`);
+              end.setAttribute('radius', '0.15');
+              end.setAttribute('color', '#fff1c1');
+              bone.appendChild(end);
+            });
+          });
+          bone.setAttribute('animation', 'property: rotation; to: 0 360 90; loop: true; dur: 1700; easing: linear');
+          object.appendChild(bone);
+        } else {
+          const coin = document.createElement('a-cylinder');
+          coin.setAttribute('position', '0 0.82 0');
+          coin.setAttribute('radius', '0.34');
+          coin.setAttribute('height', '0.09');
+          coin.setAttribute('rotation', '90 0 0');
+          coin.setAttribute('color', '#ffc928');
+          coin.setAttribute('material', 'metalness: 0.75; roughness: 0.25; emissive: #7a4c00; emissiveIntensity: 0.3');
+          coin.setAttribute('animation', 'property: rotation; to: 90 360 0; loop: true; dur: 1300; easing: linear');
+          object.appendChild(coin);
+          const center = document.createElement('a-text');
+          center.setAttribute('value', '$');
+          center.setAttribute('align', 'center');
+          center.setAttribute('color', '#8e5710');
+          center.setAttribute('position', '0 0.82 0.06');
+          center.setAttribute('rotation', '0 0 0');
+          center.setAttribute('width', '1');
+          object.appendChild(center);
+        }
+        this.objectsRoot.appendChild(object);
+        object.object3D.el = object;
+        return object.object3D;
+      },
+
+      playSound: function (kind) {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) {
+            return;
+          }
+          this.audio = this.audio || new AudioContextClass();
+          if (this.audio.state === 'suspended') {
+            this.audio.resume();
+          }
+          const notes = {
+            jump: [440, 0.12, 'triangle'],
+            bone: [740, 0.15, 'sine'],
+            coin: [1080, 0.13, 'triangle'],
+            gift: [920, 0.2, 'triangle'],
+            hit: [130, 0.32, 'sawtooth'],
+            catch: [880, 0.34, 'sine'],
+            run: [115, 0.07, 'sine']
+          };
+          const [frequency, duration, wave] = notes[kind] || notes.run;
+          const oscillator = this.audio.createOscillator();
+          const gain = this.audio.createGain();
+          oscillator.type = wave;
+          oscillator.frequency.setValueAtTime(frequency, this.audio.currentTime);
+          gain.gain.setValueAtTime(kind === 'run' ? 0.025 : 0.075, this.audio.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.audio.currentTime + duration);
+          oscillator.connect(gain);
+          gain.connect(this.audio.destination);
+          oscillator.start();
+          oscillator.stop(this.audio.currentTime + duration);
+        } catch (error) {
+          console.warn('Sunetul jocului nu a putut fi redat.', error);
+        }
+      },
+
+      changeLane: function (direction) {
+        if (!this.active) {
+          return;
+        }
+        this.targetLane = Math.max(0, Math.min(2, this.targetLane + direction));
+      },
+
+      jump: function () {
+        if (!this.active || this.jumping) {
+          return;
+        }
+        this.jumping = true;
+        this.jumpStarted = performance.now();
+        if (this.dogModelLoaded) {
+          this.setCharacterAnimation(this.dogModel, 'Jump', 'once');
+        }
+        this.playSound('jump');
+      },
+
+      startGame: function () {
+        this.reset();
+        this.active = true;
+        this.thiefCaught = false;
+        if (this.dogModelLoaded) {
+          this.setCharacterAnimation(this.dogModel, 'Run');
+        }
+        startButton.hidden = true;
+        messageElement.textContent = 'Aleargă! Sari peste obstacole și adună oasele și monedele!';
+        this.officerArm.setAttribute('animation__throw', {
+          property: 'rotation.z',
+          from: '-20',
+          to: '-125',
+          dur: 380,
+          easing: 'easeOutCubic'
+        });
+        this.thief.object3D.position.set(0, 0, -7);
+        this.thief.object3D.scale.setScalar(0.7);
+        this.thief.object3D.position.y = 1.7;
+        this.thief.object3D.rotation.x = 0.7;
+        this.thief.object3D.userData.launchStarted = performance.now();
+        if (this.thiefModelLoaded) {
+          this.setCharacterAnimation(this.thiefModel, 'Idle');
+        }
+      },
+
+      reset: function () {
+        this.active = false;
+        this.distance = 0;
+        this.bones = 0;
+        this.coins = 0;
+        this.gifts = 0;
+        this.shieldCharges = 0;
+        this.magnetUntil = 0;
+        this.doubleUntil = 0;
+        this.level = 1;
+        this.speed = 10;
+        this.lane = 1;
+        this.targetLane = 1;
+        this.jumping = false;
+        this.thiefCaught = false;
+        this.spawnIndex = 0;
+        this.lastTime = 0;
+        this.dog.object3D.position.set(0, 0, 1.5);
+        this.dog.object3D.rotation.set(0, Math.PI, 0);
+        this.thief.object3D.position.set(0, 0, -7);
+        this.thief.object3D.scale.setScalar(0.75);
+        this.thief.object3D.userData.launchStarted = 0;
+        if (this.dogModelLoaded) {
+          this.setCharacterAnimation(this.dogModel, 'Idle');
+        }
+        if (this.thiefModelLoaded) {
+          this.setCharacterAnimation(this.thiefModel, 'Idle');
+        }
+        this.officerArm.removeAttribute('animation__throw');
+        this.officerArm.object3D.rotation.z = -0.35;
+        this.objects.forEach((object, index) => {
+          object.position.x = this.lanes[Number(object.el.dataset.lane)];
+          object.position.z = -18 - index * 8;
+          object.el.dataset.collected = 'false';
+          object.visible = true;
+        });
+        this.cityBlocks.forEach(block => {
+          block.object3D.position.z = block.object3D.userData.startZ;
+        });
+        this.roadsideTrees.forEach(tree => {
+          tree.object3D.position.z = tree.object3D.userData.startZ;
+        });
+        this.lamps.forEach(lamp => {
+          lamp.object3D.position.z = lamp.object3D.userData.startZ;
+        });
+        this.cityMarker.object3D.position.z = this.cityMarker.object3D.userData.startZ;
+        distanceElement.textContent = '0';
+        bonesElement.textContent = '0';
+        coinsElement.textContent = '0';
+        giftsElement.textContent = '0';
+        levelElement.textContent = '1';
+        powerStatusElement.textContent = 'Cadouri: scut · magnet · puncte duble';
+      },
+
+      finish: function (caught) {
+        if (!this.active) {
+          return;
+        }
+        this.active = false;
+        this.thiefCaught = caught;
+        if (this.dogModelLoaded) {
+          this.setCharacterAnimation(this.dogModel, 'Idle');
+        }
+        if (this.thiefModelLoaded) {
+          this.setCharacterAnimation(this.thiefModel, 'Idle');
+        }
+        if (caught) {
+          this.thief.object3D.position.set(this.lanes[this.lane], 0, 0.3);
+          messageElement.textContent = `L-ai prins! Ai alergat ${Math.floor(this.distance)} m, ai adunat ${this.bones} oase și ${this.coins} monede!`;
+        } else {
+          this.playSound('hit');
+          messageElement.textContent = `Azor s-a lovit de un obstacol. Distanță: ${Math.floor(this.distance)} m. Încearcă din nou!`;
+        }
+        startButton.textContent = caught ? 'Joacă din nou' : 'Reia urmărirea';
+        startButton.hidden = false;
+      },
+
+      updatePowerStatus: function (now = performance.now()) {
+        const statuses = [];
+        if (this.shieldCharges > 0) {
+          statuses.push(`Scut activ: ${this.shieldCharges} protecție`);
+        }
+        if (now < this.magnetUntil) {
+          statuses.push('Magnet activ: atrage obiectele timp de 10 secunde');
+        }
+        if (now < this.doubleUntil) {
+          statuses.push('Puncte duble timp de 10 secunde');
+        }
+        powerStatusElement.textContent = statuses.length
+          ? statuses.join(' · ')
+          : 'Cadouri: scut · magnet · puncte duble';
+      },
+
+      activateGift: function (giftKind) {
+        if (giftKind === 'shield') {
+          this.shieldCharges += 1;
+          messageElement.textContent = 'Cadou: scutul te protejează de o coliziune!';
+        } else if (giftKind === 'magnet') {
+          this.magnetUntil = performance.now() + 10000;
+          messageElement.textContent = 'Cadou: magnet! Oasele și monedele din apropiere sunt atrase.';
+        } else {
+          this.doubleUntil = performance.now() + 10000;
+          messageElement.textContent = 'Cadou: puncte duble! Oasele și monedele valorează dublu.';
+        }
+        this.updatePowerStatus();
+      },
+
+      tick: function (time, delta) {
+        const seconds = Math.min(delta / 1000, 0.05);
+        this.skyline.object3D.position.x = Math.sin(time * 0.00015) * 0.65;
+        this.dog.object3D.position.x += (this.lanes[this.targetLane] - this.dog.object3D.position.x) * Math.min(1, seconds * 11);
+        this.lane = this.dog.object3D.position.x < -1.05 ? 0 : this.dog.object3D.position.x > 1.05 ? 2 : 1;
+
+        if (!this.active) {
+          return;
+        }
+
+        this.distance += this.speed * seconds;
+        const nextLevel = Math.floor(this.distance / 120) + 1;
+        if (nextLevel !== this.level) {
+          this.level = nextLevel;
+          this.speed = Math.min(18, 10 + (this.level - 1) * 1.15);
+          levelElement.textContent = this.level;
+          messageElement.textContent = `Nivelul ${this.level}! Azor aleargă mai repede!`;
+        }
+        distanceElement.textContent = Math.floor(this.distance);
+
+        if (Math.floor(this.distance) > bestDistance) {
+          bestDistance = Math.floor(this.distance);
+          bestScoreElement.textContent = bestDistance;
+          try {
+            localStorage.setItem('azor_city_best_distance', String(bestDistance));
+          } catch (error) {
+            console.warn('Recordul nu a putut fi salvat.', error);
+          }
+        }
+
+        const jumpProgress = this.jumping ? (performance.now() - this.jumpStarted) / this.jumpDuration : 0;
+        if (this.jumping && jumpProgress >= 1) {
+          this.jumping = false;
+          if (this.dogModelLoaded) {
+            this.setCharacterAnimation(this.dogModel, 'Run');
+          }
+        }
+        const jumpHeight = this.jumping ? Math.sin(Math.PI * jumpProgress) * 1.8 : 0;
+        this.dog.object3D.position.y = jumpHeight + (Math.sin(time * 0.025) * 0.045);
+        this.dogBody.object3D.rotation.x = Math.sin(time * 0.028) * 0.045;
+        this.dogTail.object3D.rotation.x = Math.sin(time * 0.02) * 0.45;
+        this.dogLegs.forEach((leg, index) => {
+          leg.object3D.rotation.x = this.jumping ? -0.85 : Math.sin(time * 0.035) * (index % 2 === 0 ? 0.75 : -0.75);
+        });
+
+        const scroll = this.speed * seconds;
+        const magnetActive = performance.now() < this.magnetUntil;
+        this.cityBlocks.forEach(block => {
+          block.object3D.position.z += scroll * 0.74;
+          if (block.object3D.position.z > 15) {
+            block.object3D.position.z -= 150;
+          }
+        });
+        this.roadsideTrees.forEach(tree => {
+          tree.object3D.position.z += scroll;
+          if (tree.object3D.position.z > 12) {
+            tree.object3D.position.z -= 160;
+          }
+        });
+        this.lamps.forEach(lamp => {
+          lamp.object3D.position.z += scroll;
+          if (lamp.object3D.position.z > 12) {
+            lamp.object3D.position.z -= 46;
+          }
+        });
+        this.cityMarker.object3D.position.z += scroll;
+        if (this.cityMarker.object3D.position.z > 12) {
+          this.cityMarker.object3D.position.z -= 50;
+        }
+
+        this.objects.forEach(object => {
+          object.position.z += scroll;
+          if (object.position.z > 3.1) {
+            const type = object.el.dataset.type;
+            const lane = Math.floor(Math.random() * 3);
+            object.el.dataset.lane = String(lane);
+            object.el.dataset.collected = 'false';
+            object.position.x = this.lanes[lane];
+            object.position.z = -35 - Math.random() * 16;
+            this.spawnIndex += 1;
+            object.visible = true;
+          }
+          if (object.el.dataset.collected === 'true') {
+            return;
+          }
+          const type = object.el.dataset.type;
+          const isCollectible = type === 'bones' || type === 'coin';
+          if (magnetActive && isCollectible
+            && Math.abs(object.position.x - this.dog.object3D.position.x) < 2.5
+            && Math.abs(object.position.z - this.dog.object3D.position.z) < 3.2) {
+            const pull = Math.min(1, seconds * 7);
+            object.position.x += (this.dog.object3D.position.x - object.position.x) * pull;
+            object.position.z += (this.dog.object3D.position.z - object.position.z) * pull;
+          }
+          const objectDistance = Math.abs(object.position.z - this.dog.object3D.position.z);
+          const sameLane = Math.abs(object.position.x - this.dog.object3D.position.x) < 0.78;
+          if (isCollectible) {
+            if (objectDistance > 1.05 || (!sameLane && !magnetActive)) {
+              return;
+            }
+          } else if (objectDistance > 1.05 || !sameLane) {
+            return;
+          }
+          const inMagnetRange = magnetActive
+            && Math.abs(object.position.x - this.dog.object3D.position.x) < 0.78
+            && (type === 'bones' || type === 'coin')
+            && objectDistance < 1.05;
+          if (!sameLane && !inMagnetRange) {
+            return;
+          }
+          if (type === 'gift') {
+            object.el.dataset.collected = 'true';
+            object.visible = false;
+            this.gifts += 1;
+            giftsElement.textContent = this.gifts;
+            this.activateGift(object.el.dataset.giftKind);
+            this.playSound('gift');
+          } else if (type === 'bones' || type === 'coin') {
+            object.el.dataset.collected = 'true';
+            object.visible = false;
+            if (type === 'bones') {
+              this.bones += performance.now() < this.doubleUntil ? 2 : 1;
+              bonesElement.textContent = this.bones;
+              this.playSound('bone');
+            } else {
+              this.coins += performance.now() < this.doubleUntil ? 2 : 1;
+              coinsElement.textContent = this.coins;
+              this.playSound('coin');
+            }
+          } else if (type === 'car' || !this.jumping || jumpHeight < 0.95) {
+            if (this.shieldCharges > 0) {
+              this.shieldCharges -= 1;
+              object.el.dataset.collected = 'true';
+              object.visible = false;
+              powerStatusElement.textContent = this.shieldCharges > 0
+                ? `Scut activ: ${this.shieldCharges} protecție`
+                : 'Scut folosit! Ai evitat impactul.';
+              messageElement.textContent = 'Scutul te-a protejat de obstacol!';
+            } else {
+              this.finish(false);
+            }
+          }
+        });
+        this.updatePowerStatus();
+
+        if (!this.active) {
+          return;
+        }
+
+        const launchStarted = this.thief.object3D.userData.launchStarted;
+        if (launchStarted) {
+          const launchProgress = Math.min(1, (performance.now() - launchStarted) / 850);
+          this.thief.object3D.position.y = Math.sin(Math.PI * launchProgress) * 2.1;
+          this.thief.object3D.position.z = -7 - launchProgress * 6;
+          this.thief.object3D.rotation.x = 0.7 * (1 - launchProgress);
+          if (launchProgress >= 1) {
+            this.thief.object3D.userData.launchStarted = 0;
+            this.thief.object3D.position.y = 0;
+            this.thief.object3D.position.z = -13 + this.distance * 0.04;
+            if (this.thiefModelLoaded) {
+              this.setCharacterAnimation(this.thiefModel, 'Run');
+            }
+            messageElement.textContent = 'Prinde-l pe infractor! Ferește-te de bariere!';
+          }
+        } else {
+          this.thief.object3D.position.z = -13 + this.distance * 0.04;
+          this.thief.object3D.position.y = Math.abs(Math.sin(time * 0.017)) * 0.08;
+          this.thiefLegs.forEach((leg, index) => {
+            leg.object3D.rotation.x = Math.sin(time * 0.035) * (index === 0 ? 0.65 : -0.65);
+          });
+          if (this.thief.object3D.position.z >= 1.1) {
+            this.playSound('catch');
+            this.finish(true);
+          }
+        }
+
+        if (time - this.lastSoundAt > 520) {
+          this.playSound('run');
+          this.lastSoundAt = time;
+        }
+      },
+
+      remove: function () {
+        window.removeEventListener('keydown', this.handleKeyDown);
+        window.removeEventListener('touchstart', this.handleTouchStart);
+        window.removeEventListener('touchend', this.handleTouchEnd);
+        window.removeEventListener('deviceorientation', this.handleDeviceOrientation);
+        window.removeEventListener('orientationchange', this.handleScreenOrientationChange);
+        if (screen.orientation && typeof screen.orientation.removeEventListener === 'function') {
+          screen.orientation.removeEventListener('change', this.handleScreenOrientationChange);
+        }
+        document.removeEventListener('pointerdown', this.handleARPlacement);
+        arSizeInput.removeEventListener('input', this.updateARSize);
+        if (this.arSession) {
+          this.arSession.removeEventListener('end', this.handleSessionEnd);
+          this.arSession.end();
+        }
+        this.objects.forEach(object => object.el.remove());
+      }
+    });
+
+    sceneElement.addEventListener('loaded', () => {
+      const runner = sceneElement.components['endless-runner'];
+      if (runner) {
+        runner.reset();
+      }
+    });
+  </script>
+</body>
+</html>
